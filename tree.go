@@ -167,6 +167,69 @@ func (tree *Tree) FindCIDRb(cidr []byte) (interface{}, error) {
 	return tree.find(ip, mask), nil
 }
 
+type WalkTreeFunc func(cidr net.IPNet, value interface{}) error
+
+// WalkTree walks the tree (depth first) and calls the `WalkTreeFunc` for each node with a value.
+func (tree *Tree) WalkTree(wtfunc WalkTreeFunc) error {
+	walkpath := make([]byte, 0, 128)
+	return tree.walk(wtfunc, walkpath, tree.root)
+}
+
+func (tree *Tree) walk(wtfunc WalkTreeFunc, walkpath []byte, node *node) error {
+	if node.value != nil {
+		ipnet := walkpath2net(walkpath)
+		if err := wtfunc(ipnet, node.value); err != nil {
+			return err
+		}
+	}
+	if node.left != nil {
+		if err := tree.walk(wtfunc, append(walkpath, byte(0)), node.left); err != nil {
+			return err
+		}
+	}
+	if node.right != nil {
+		if err := tree.walk(wtfunc, append(walkpath, byte(1)), node.right); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Takes a walkpath byte slice (0=left, 1=right) and turns it into the net.IPNet that it represents.
+func walkpath2net(walkpath []byte) net.IPNet {
+	ip := make([]byte, 0, net.IPv6len)
+	var byteval, bitval byte
+	for bit := 0; bit < len(walkpath); bit++ {
+		if bit%8 == 0 {
+			if bit > 0 {
+				ip = append(ip, byteval)
+			}
+			byteval = 0
+			bitval = 0x80 // binary: 1000
+		}
+		if walkpath[bit] != 0 {
+			byteval |= bitval
+		}
+		bitval >>= 1
+	}
+	ip = append(ip, byteval)
+	switch {
+	case len(ip) <= net.IPv4len:
+		mask := net.CIDRMask(len(walkpath), net.IPv4len*8)
+		for len(ip) < net.IPv4len {
+			ip = append(ip, byte(0))
+		}
+		return net.IPNet{net.IP(ip).To4(), mask}
+	case len(ip) <= net.IPv6len:
+		mask := net.CIDRMask(len(walkpath), net.IPv6len*8)
+		for len(ip) < net.IPv6len {
+			ip = append(ip, byte(0))
+		}
+		return net.IPNet{net.IP(ip).To16(), mask}
+	}
+	return net.IPNet{}
+}
+
 func (tree *Tree) insert32(key, mask uint32, value interface{}, overwrite bool) error {
 	bit := startbit
 	node := tree.root
