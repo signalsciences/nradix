@@ -4,7 +4,10 @@
 
 package nradix
 
-import "testing"
+import (
+	"net"
+	"testing"
+)
 
 func TestTree(t *testing.T) {
 	tr := NewTree(0)
@@ -351,5 +354,100 @@ func TestRegression6(t *testing.T) {
 		t.Errorf("Could not get /128 address from the tree, error: %s", err)
 	} else if inf.(int) != 12345 {
 		t.Errorf("Wrong value from /128 test, got %d, expected 12345", inf)
+	}
+}
+
+func TestWalkTree(t *testing.T) {
+	tr := NewTree(0)
+	if tr == nil || tr.root == nil {
+		t.Error("Did not create tree properly")
+	}
+	cidrs := []string{
+		"1.2.3.0/25",
+		"1.2.3.0/24",
+		"1.2.0.0/16",
+		"1.1.1.0/24",
+		"1.1.1.0/25",
+		"5.6.7.8/32",
+		"2620:10f:d000:100::5/128",
+	}
+	results := make([]string, len(cidrs))
+	for i, v := range cidrs {
+		tr.AddCIDR(v, i)
+	}
+	tr.WalkTree(OptWalkIPAuto, func(cidr net.IPNet, value interface{}) error {
+		i := value.(int)
+		if i < 0 || i >= len(results) {
+			t.Fatalf("Node value out of index range (should be 0-%d): %d", len(results)-1, i)
+		}
+		results[i] = cidr.String()
+		return nil
+	})
+	for i, v := range cidrs {
+		if results[i] != v {
+			t.Errorf("CIDR value at index %d did not match, expected %q, but found %q", i, v, results[i])
+		}
+	}
+}
+
+func TestWalkTree4(t *testing.T) {
+	tr := NewTree(0)
+	if tr == nil || tr.root == nil {
+		t.Error("Did not create tree properly")
+	}
+	cidrs := []string{
+		"1.2.3.0/25",
+		"1.2.3.0/24",
+		"1.2.0.0/16",
+		"1.1.1.0/24",
+		"1.1.1.0/25",
+		"5.6.7.8/32",
+	}
+	results := make([]string, len(cidrs))
+	for i, v := range cidrs {
+		tr.AddCIDR(v, i)
+	}
+	tr.WalkTree(OptWalkIPv4, func(cidr net.IPNet, value interface{}) error {
+		i := value.(int)
+		if i < 0 || i >= len(results) {
+			t.Fatalf("Node value out of index range (should be 0-%d): %d", len(results)-1, i)
+		}
+		results[i] = cidr.String()
+		return nil
+	})
+	for i, v := range cidrs {
+		if results[i] != v {
+			t.Errorf("CIDR value at index %d did not match, expected %q, but found %q", i, v, results[i])
+		}
+	}
+}
+
+func TestWalkTree6(t *testing.T) {
+	tr := NewTree(0)
+	if tr == nil || tr.root == nil {
+		t.Error("Did not create tree properly")
+	}
+	cidrs := []string{
+		"dead::/16",
+		"dead:beef::/48",
+		"2620:10f::/32",
+		"2620:10f:d000:100::5/128",
+	}
+	results := make([]string, len(cidrs))
+	for i, v := range cidrs {
+		tr.AddCIDR(v, i)
+	}
+	tr.WalkTree(OptWalkIPv6, func(cidr net.IPNet, value interface{}) error {
+		i := value.(int)
+		if i < 0 || i >= len(results) {
+			t.Fatalf("Node value out of index range (should be 0-%d): %d", len(results)-1, i)
+		}
+		results[i] = cidr.String()
+		return nil
+	})
+	for i, v := range cidrs {
+		if results[i] != v {
+			t.Errorf("CIDR value at index %d did not match, expected %q, but found %q", i, v, results[i])
+		}
 	}
 }
