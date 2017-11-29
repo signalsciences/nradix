@@ -28,6 +28,14 @@ const (
 	startbyte = byte(0x80)
 )
 
+type OptWalk uint32
+
+const (
+	OptWalkIPv4   = OptWalk(0x1)
+	OptWalkIPv6   = OptWalk(0x2)
+	OptWalkIPAuto = OptWalk(0x3)
+)
+
 var (
 	ErrNodeBusy = errors.New("Node Busy")
 	ErrNotFound = errors.New("No Such Node")
@@ -170,25 +178,25 @@ func (tree *Tree) FindCIDRb(cidr []byte) (interface{}, error) {
 type WalkTreeFunc func(cidr net.IPNet, value interface{}) error
 
 // WalkTree walks the tree (depth first) and calls the `WalkTreeFunc` for each node with a value.
-func (tree *Tree) WalkTree(wtfunc WalkTreeFunc) error {
+func (tree *Tree) WalkTree(opt OptWalk, wtfunc WalkTreeFunc) error {
 	walkpath := make([]byte, 0, 128)
-	return tree.walk(wtfunc, walkpath, tree.root)
+	return tree.walk(opt, wtfunc, walkpath, tree.root)
 }
 
-func (tree *Tree) walk(wtfunc WalkTreeFunc, walkpath []byte, node *node) error {
+func (tree *Tree) walk(opt OptWalk, wtfunc WalkTreeFunc, walkpath []byte, node *node) error {
 	if node.value != nil {
-		ipnet := walkpath2net(walkpath)
+		ipnet := walkpath2net(opt, walkpath)
 		if err := wtfunc(ipnet, node.value); err != nil {
 			return err
 		}
 	}
 	if node.left != nil {
-		if err := tree.walk(wtfunc, append(walkpath, byte(0)), node.left); err != nil {
+		if err := tree.walk(opt, wtfunc, append(walkpath, byte(0)), node.left); err != nil {
 			return err
 		}
 	}
 	if node.right != nil {
-		if err := tree.walk(wtfunc, append(walkpath, byte(1)), node.right); err != nil {
+		if err := tree.walk(opt, wtfunc, append(walkpath, byte(1)), node.right); err != nil {
 			return err
 		}
 	}
@@ -196,7 +204,7 @@ func (tree *Tree) walk(wtfunc WalkTreeFunc, walkpath []byte, node *node) error {
 }
 
 // Takes a walkpath byte slice (0=left, 1=right) and turns it into the net.IPNet that it represents.
-func walkpath2net(walkpath []byte) net.IPNet {
+func walkpath2net(opt OptWalk, walkpath []byte) net.IPNet {
 	ip := make([]byte, 0, net.IPv6len)
 	var byteval, bitval byte
 	for bit := 0; bit < len(walkpath); bit++ {
@@ -205,7 +213,7 @@ func walkpath2net(walkpath []byte) net.IPNet {
 				ip = append(ip, byteval)
 			}
 			byteval = 0
-			bitval = 0x80 // binary: 1000
+			bitval = 0x80
 		}
 		if walkpath[bit] != 0 {
 			byteval |= bitval
@@ -214,18 +222,18 @@ func walkpath2net(walkpath []byte) net.IPNet {
 	}
 	ip = append(ip, byteval)
 	switch {
-	case len(ip) <= net.IPv4len:
+	case opt&OptWalkIPv4 != 0 && len(ip) <= net.IPv4len:
 		mask := net.CIDRMask(len(walkpath), net.IPv4len*8)
 		for len(ip) < net.IPv4len {
 			ip = append(ip, byte(0))
 		}
-		return net.IPNet{net.IP(ip).To4(), mask}
-	case len(ip) <= net.IPv6len:
+		return net.IPNet{net.IP(ip), mask}
+	case opt&OptWalkIPv6 != 0 && len(ip) <= net.IPv6len:
 		mask := net.CIDRMask(len(walkpath), net.IPv6len*8)
 		for len(ip) < net.IPv6len {
 			ip = append(ip, byte(0))
 		}
-		return net.IPNet{net.IP(ip).To16(), mask}
+		return net.IPNet{net.IP(ip), mask}
 	}
 	return net.IPNet{}
 }
