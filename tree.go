@@ -155,7 +155,7 @@ func (tree *Tree) DeleteCIDRb(cidr []byte) error {
 	return tree.delete(ip, mask, false)
 }
 
-// Find CIDR traverses tree to proper Node and returns previously saved information in longest covered IP.
+// FindCIDR traverses tree to proper Node and returns previously saved information in longest covered IP.
 func (tree *Tree) FindCIDR(cidr string) (interface{}, error) {
 	return tree.FindCIDRb([]byte(cidr))
 }
