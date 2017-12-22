@@ -449,13 +449,13 @@ func (tree *Tree) find32(key, mask uint32) (value interface{}) {
 		if node.value != nil {
 			value = node.value
 		}
+		if mask&bit == 0 {
+			break
+		}
 		if key&bit != 0 {
 			node = node.right
 		} else {
 			node = node.left
-		}
-		if mask&bit == 0 {
-			break
 		}
 		bit >>= 1
 
@@ -474,13 +474,13 @@ func (tree *Tree) find(key net.IP, mask net.IPMask) (value interface{}) {
 		if node.value != nil {
 			value = node.value
 		}
+		if mask[i]&bit == 0 {
+			break
+		}
 		if key[i]&bit != 0 {
 			node = node.right
 		} else {
 			node = node.left
-		}
-		if mask[i]&bit == 0 {
-			break
 		}
 		if bit >>= 1; bit == 0 {
 			i, bit = i+1, startbyte
