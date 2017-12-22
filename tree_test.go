@@ -188,6 +188,100 @@ func TestTree(t *testing.T) {
 	}
 }
 
+func TestGet(t *testing.T) {
+	tr := NewTree(0)
+	if tr == nil || tr.root == nil {
+		t.Error("Did not create tree properly")
+	}
+	err := tr.AddCIDR("1.2.3.4/32", 0)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Matching defined cidr
+	inf, err := tr.GetCIDR("1.2.3.4")
+	if err != nil {
+		t.Error(err)
+	}
+	if inf.(int) != 0 {
+		t.Errorf("Wrong value, expected 0, got %v", inf)
+	}
+
+	err = tr.AddCIDR("1.2.3.0/25", 1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Matching defined cidr
+	inf, err = tr.GetCIDR("1.2.3.0/25")
+	if err != nil {
+		t.Error(err)
+	}
+	if inf.(int) != 1 {
+		t.Errorf("Wrong value, expected 1, got %v", inf)
+	}
+
+	// Inside defined cidr
+	inf, err = tr.GetCIDR("1.2.3.60/32")
+	if err == nil {
+		t.Errorf("Expected error, got %v", inf)
+	}
+	inf, err = tr.GetCIDR("1.2.3.60")
+	if err == nil {
+		t.Errorf("Expected error, got %v", inf)
+	}
+
+	// Outside defined cidr
+	inf, err = tr.GetCIDR("1.2.3.160/32")
+	if err == nil {
+		t.Errorf("Expected error, got %v", inf)
+	}
+	inf, err = tr.GetCIDR("1.2.3.160")
+	if err == nil {
+		t.Errorf("Expected error, got %v", inf)
+	}
+	inf, err = tr.GetCIDR("1.2.3.128/25")
+	if err == nil {
+		t.Errorf("Expected error, got %v", inf)
+	}
+
+	// Covering not defined
+	inf, err = tr.GetCIDR("1.2.3.0/24")
+	if err == nil {
+		t.Errorf("Expected error, got %v", inf)
+	}
+
+	// Covering defined
+	err = tr.AddCIDR("1.2.3.0/24", 2)
+	if err != nil {
+		t.Error(err)
+	}
+	inf, err = tr.GetCIDR("1.2.3.0/24")
+	if err != nil {
+		t.Error(err)
+	}
+	if inf.(int) != 2 {
+		t.Errorf("Wrong value, expected 2, got %v", inf)
+	}
+
+	inf, err = tr.GetCIDR("1.2.3.160/32")
+	if err == nil {
+		t.Errorf("Expected error, got %v", inf)
+	}
+
+	// Hit both covering and internal
+	inf, err = tr.GetCIDR("1.2.3.5/32")
+	if err == nil {
+		t.Errorf("Expected error, got %v", inf)
+	}
+
+	// Hit both covering and internal
+	inf, err = tr.GetCIDR("1.2.3.1/32")
+	if err == nil {
+		t.Errorf("Expected error, got %v", inf)
+	}
+}
+
 func TestSet(t *testing.T) {
 	tr := NewTree(0)
 	if tr == nil || tr.root == nil {

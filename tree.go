@@ -166,13 +166,43 @@ func (tree *Tree) FindCIDRb(cidr []byte) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		return tree.find32(ip, mask), nil
+		value, _ := tree.find32(ip, mask)
+		return value, nil
 	}
 	ip, mask, err := parsecidr6(cidr)
 	if err != nil || ip == nil {
 		return nil, err
 	}
-	return tree.find(ip, mask), nil
+	value, _ := tree.find(ip, mask)
+	return value, nil
+}
+
+// GetCIDR traverses tree to proper Node and returns previously saved information for an exact match.
+func (tree *Tree) GetCIDR(cidr string) (interface{}, error) {
+	return tree.GetCIDRb([]byte(cidr))
+}
+
+func (tree *Tree) GetCIDRb(cidr []byte) (interface{}, error) {
+	if bytes.IndexByte(cidr, '.') > 0 {
+		ip, mask, err := parsecidr4(cidr)
+		if err != nil {
+			return nil, err
+		}
+		value, exact := tree.find32(ip, mask)
+		if !exact {
+			return nil, ErrNotFound
+		}
+		return value, nil
+	}
+	ip, mask, err := parsecidr6(cidr)
+	if err != nil || ip == nil {
+		return nil, err
+	}
+	value, exact := tree.find(ip, mask)
+	if !exact {
+		return nil, ErrNotFound
+	}
+	return value, nil
 }
 
 type WalkTreeFunc func(cidr net.IPNet, value interface{}) error
@@ -442,12 +472,13 @@ func (tree *Tree) delete(key net.IP, mask net.IPMask, wholeRange bool) error {
 	return nil
 }
 
-func (tree *Tree) find32(key, mask uint32) (value interface{}) {
+func (tree *Tree) find32(key, mask uint32) (value interface{}, exact bool) {
 	bit := startbit
 	node := tree.root
 	for node != nil {
 		if node.value != nil {
 			value = node.value
+			exact = (mask&bit == 0)
 		}
 		if mask&bit == 0 {
 			break
@@ -458,14 +489,13 @@ func (tree *Tree) find32(key, mask uint32) (value interface{}) {
 			node = node.left
 		}
 		bit >>= 1
-
 	}
-	return value
+	return value, exact
 }
 
-func (tree *Tree) find(key net.IP, mask net.IPMask) (value interface{}) {
+func (tree *Tree) find(key net.IP, mask net.IPMask) (value interface{}, exact bool) {
 	if len(key) != len(mask) {
-		return nil
+		return nil, false
 	}
 	var i int
 	bit := startbyte
@@ -473,6 +503,7 @@ func (tree *Tree) find(key net.IP, mask net.IPMask) (value interface{}) {
 	for node != nil {
 		if node.value != nil {
 			value = node.value
+			exact = mask[i]&bit == 0
 		}
 		if mask[i]&bit == 0 {
 			break
@@ -488,12 +519,13 @@ func (tree *Tree) find(key net.IP, mask net.IPMask) (value interface{}) {
 				// reached depth of the tree, there should be matching node...
 				if node != nil {
 					value = node.value
+					exact = (value != nil)
 				}
 				break
 			}
 		}
 	}
-	return value
+	return value, exact
 }
 
 func (tree *Tree) newnode() (p *node) {
