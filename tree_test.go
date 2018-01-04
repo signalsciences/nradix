@@ -188,7 +188,7 @@ func TestTree(t *testing.T) {
 	}
 }
 
-func TestGet(t *testing.T) {
+func TestFindExact(t *testing.T) {
 	tr := NewTree(0)
 	if tr == nil || tr.root == nil {
 		t.Error("Did not create tree properly")
@@ -199,7 +199,7 @@ func TestGet(t *testing.T) {
 	}
 
 	// Matching defined cidr
-	inf, err := tr.GetCIDR("1.2.3.4")
+	inf, err := tr.FindExactCIDR("1.2.3.4")
 	if err != nil {
 		t.Error(err)
 	}
@@ -213,7 +213,7 @@ func TestGet(t *testing.T) {
 	}
 
 	// Matching defined cidr
-	inf, err = tr.GetCIDR("1.2.3.0/25")
+	inf, err = tr.FindExactCIDR("1.2.3.0/25")
 	if err != nil {
 		t.Error(err)
 	}
@@ -222,31 +222,31 @@ func TestGet(t *testing.T) {
 	}
 
 	// Inside defined cidr
-	inf, err = tr.GetCIDR("1.2.3.60/32")
+	inf, err = tr.FindExactCIDR("1.2.3.60/32")
 	if err == nil {
 		t.Errorf("Expected error, got %v", inf)
 	}
-	inf, err = tr.GetCIDR("1.2.3.60")
+	inf, err = tr.FindExactCIDR("1.2.3.60")
 	if err == nil {
 		t.Errorf("Expected error, got %v", inf)
 	}
 
 	// Outside defined cidr
-	inf, err = tr.GetCIDR("1.2.3.160/32")
+	inf, err = tr.FindExactCIDR("1.2.3.160/32")
 	if err == nil {
 		t.Errorf("Expected error, got %v", inf)
 	}
-	inf, err = tr.GetCIDR("1.2.3.160")
+	inf, err = tr.FindExactCIDR("1.2.3.160")
 	if err == nil {
 		t.Errorf("Expected error, got %v", inf)
 	}
-	inf, err = tr.GetCIDR("1.2.3.128/25")
+	inf, err = tr.FindExactCIDR("1.2.3.128/25")
 	if err == nil {
 		t.Errorf("Expected error, got %v", inf)
 	}
 
 	// Covering not defined
-	inf, err = tr.GetCIDR("1.2.3.0/24")
+	inf, err = tr.FindExactCIDR("1.2.3.0/24")
 	if err == nil {
 		t.Errorf("Expected error, got %v", inf)
 	}
@@ -256,7 +256,7 @@ func TestGet(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	inf, err = tr.GetCIDR("1.2.3.0/24")
+	inf, err = tr.FindExactCIDR("1.2.3.0/24")
 	if err != nil {
 		t.Error(err)
 	}
@@ -264,21 +264,247 @@ func TestGet(t *testing.T) {
 		t.Errorf("Wrong value, expected 2, got %v", inf)
 	}
 
-	inf, err = tr.GetCIDR("1.2.3.160/32")
+	inf, err = tr.FindExactCIDR("1.2.3.160/32")
 	if err == nil {
 		t.Errorf("Expected error, got %v", inf)
 	}
 
 	// Hit both covering and internal
-	inf, err = tr.GetCIDR("1.2.3.5/32")
+	inf, err = tr.FindExactCIDR("1.2.3.5/32")
 	if err == nil {
 		t.Errorf("Expected error, got %v", inf)
 	}
 
 	// Hit both covering and internal
-	inf, err = tr.GetCIDR("1.2.3.1/32")
+	inf, err = tr.FindExactCIDR("1.2.3.1/32")
 	if err == nil {
 		t.Errorf("Expected error, got %v", inf)
+	}
+}
+
+func TestFindAll(t *testing.T) {
+	tr := NewTree(0)
+	if tr == nil || tr.root == nil {
+		t.Error("Did not create tree properly")
+	}
+	err := tr.AddCIDR("1.2.3.0/25", 1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Matching defined cidr
+	inf, err := tr.FindAllCIDR("1.2.3.1/25")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(inf) != 1 {
+		t.Errorf("Wrong number of values, expected 1, got %v", len(inf))
+	} else if inf[0].(int) != 1 {
+		t.Errorf("Wrong value, expected 1, got %v", inf)
+	}
+
+	// Inside defined cidr
+	inf, err = tr.FindAllCIDR("1.2.3.60/32")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(inf) != 1 {
+		t.Errorf("Wrong number of values, expected 1, got %v", len(inf))
+	} else if inf[0].(int) != 1 {
+		t.Errorf("Wrong value, expected 1, got %v", inf)
+	}
+	inf, err = tr.FindAllCIDR("1.2.3.60")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(inf) != 1 {
+		t.Errorf("Wrong number of values, expected 1, got %v", len(inf))
+	} else if inf[0].(int) != 1 {
+		t.Errorf("Wrong value, expected 1, got %v", inf)
+	}
+
+	// Outside defined cidr
+	inf, err = tr.FindAllCIDR("1.2.3.160/32")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(inf) != 0 {
+		t.Errorf("Wrong number of values, expected 0, got %v", len(inf))
+	}
+	if inf != nil {
+		t.Errorf("Wrong value, expected nil, got %v", inf)
+	}
+	inf, err = tr.FindAllCIDR("1.2.3.160")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(inf) != 0 {
+		t.Errorf("Wrong number of values, expected 0, got %v", len(inf))
+	}
+	if inf != nil {
+		t.Errorf("Wrong value, expected nil, got %v", inf)
+	}
+
+	inf, err = tr.FindAllCIDR("1.2.3.128/25")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(inf) != 0 {
+		t.Errorf("Wrong number of values, expected 0, got %v", len(inf))
+	}
+	if inf != nil {
+		t.Errorf("Wrong value, expected nil, got %v", inf)
+	}
+
+	// Covering not defined
+	inf, err = tr.FindAllCIDR("1.2.3.0/24")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(inf) != 0 {
+		t.Errorf("Wrong number of values, expected 0, got %v", len(inf))
+	}
+	if inf != nil {
+		t.Errorf("Wrong value, expected nil, got %v", inf)
+	}
+
+	// Covering defined
+	err = tr.AddCIDR("1.2.3.0/24", 2)
+	if err != nil {
+		t.Error(err)
+	}
+	inf, err = tr.FindAllCIDR("1.2.3.0/25")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(inf) != 2 {
+		t.Errorf("Wrong number of values, expected 2, got %v", len(inf))
+	} else if inf[0].(int) != 2 || inf[1].(int) != 1 {
+		t.Errorf("Wrong value, expected [2 1], got %v", inf)
+	}
+
+	inf, err = tr.FindAllCIDR("1.2.3.160/32")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(inf) != 1 {
+		t.Errorf("Wrong number of values, expected 1, got %v", len(inf))
+	} else if inf[0].(int) != 2 {
+		t.Errorf("Wrong value, expected [2], got %v", inf)
+	}
+
+	// Hit both covering and internal, should return both from least to most specific
+	inf, err = tr.FindAllCIDR("1.2.3.0/32")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(inf) != 2 {
+		t.Errorf("Wrong number of values, expected 2, got %v", len(inf))
+	} else if inf[0].(int) != 2 || inf[1].(int) != 1 {
+		t.Errorf("Wrong value, expected [2 1], got %v", inf)
+	}
+
+	// Delete internal
+	err = tr.DeleteCIDR("1.2.3.0/25")
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Hit covering with old IP
+	inf, err = tr.FindAllCIDR("1.2.3.0/32")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(inf) != 1 {
+		t.Errorf("Wrong number of values, expected 1, got %v", len(inf))
+	} else if inf[0].(int) != 2 {
+		t.Errorf("Wrong value, expected [2], got %v", inf)
+	}
+
+	// Add internal back in
+	err = tr.AddCIDR("1.2.3.0/25", 1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Hit both covering and internal, should return both from least to most specific
+	inf, err = tr.FindAllCIDR("1.2.3.0/32")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(inf) != 2 {
+		t.Errorf("Wrong number of values, expected 2, got %v", len(inf))
+	} else if inf[0].(int) != 2 || inf[1].(int) != 1 {
+		t.Errorf("Wrong value, expected [2 1], got %v", inf)
+	}
+
+	// Delete covering
+	err = tr.DeleteCIDR("1.2.3.0/24")
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Hit with old IP
+	inf, err = tr.FindAllCIDR("1.2.3.0/32")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(inf) != 1 {
+		t.Errorf("Wrong number of values, expected 1, got %v", len(inf))
+	} else if inf[0].(int) != 1 {
+		t.Errorf("Wrong value, expected [1], got %v", inf)
+	}
+
+	// Find covering again
+	inf, err = tr.FindAllCIDR("1.2.3.0/24")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(inf) != 0 {
+		t.Errorf("Wrong number of values, expected 0, got %v", len(inf))
+	}
+	if inf != nil {
+		t.Errorf("Wrong value, expected nil, got %v", inf)
+	}
+
+	// Add covering back in
+	err = tr.AddCIDR("1.2.3.0/24", 2)
+	if err != nil {
+		t.Error(err)
+	}
+	inf, err = tr.FindAllCIDR("1.2.3.0/24")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(inf) != 1 {
+		t.Errorf("Wrong number of values, expected 1, got %v", len(inf))
+	} else if inf[0].(int) != 2 {
+		t.Errorf("Wrong value, expected [2], got %v", inf)
+	}
+
+	// Delete the whole range
+	err = tr.DeleteWholeRangeCIDR("1.2.3.0/24")
+	if err != nil {
+		t.Error(err)
+	}
+	// should be no value for covering
+	inf, err = tr.FindAllCIDR("1.2.3.0/24")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(inf) != 0 {
+		t.Errorf("Wrong number of values, expected 0, got %v", len(inf))
+	}
+	if inf != nil {
+		t.Errorf("Wrong value, expected nil, got %v", inf)
+	}
+	// should be no value for internal
+	inf, err = tr.FindAllCIDR("1.2.3.0/32")
+	if err != nil {
+		t.Error(err)
+	}
+	if inf != nil {
+		t.Errorf("Wrong value, expected nil, got %v", inf)
 	}
 }
 
