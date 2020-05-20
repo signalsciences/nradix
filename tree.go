@@ -187,9 +187,8 @@ func (tree *Tree) FindCIDRb(cidr []byte) (interface{}, error) {
 	values := tree.find(ip, mask, findBest)
 	if len(values) > 0 {
 		return values[0], nil
-	} else {
-		return nil, nil
 	}
+	return nil, nil
 }
 
 // FindExactCIDR traverses tree to proper Node and returns previously saved information for an exact match.
@@ -295,13 +294,13 @@ func walkpath2net(opt OptWalk, walkpath []byte) net.IPNet {
 		for len(ip) < net.IPv4len {
 			ip = append(ip, byte(0))
 		}
-		return net.IPNet{net.IP(ip), mask}
+		return net.IPNet{IP: net.IP(ip), Mask: mask}
 	case opt&OptWalkIPv6 != 0 && len(ip) <= net.IPv6len:
 		mask := net.CIDRMask(len(walkpath), net.IPv6len*8)
 		for len(ip) < net.IPv6len {
 			ip = append(ip, byte(0))
 		}
-		return net.IPNet{net.IP(ip), mask}
+		return net.IPNet{IP: net.IP(ip), Mask: mask}
 	}
 	return net.IPNet{}
 }
