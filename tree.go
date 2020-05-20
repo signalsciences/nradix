@@ -177,9 +177,8 @@ func (tree *Tree) FindCIDRb(cidr []byte) (interface{}, error) {
 		values := tree.find32(ip, mask, findBest)
 		if len(values) > 0 {
 			return values[0], nil
-		} else {
-			return nil, nil
 		}
+		return nil, nil
 	}
 	ip, mask, err := parsecidr6(cidr)
 	if err != nil || ip == nil {
