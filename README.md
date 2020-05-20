@@ -1,5 +1,7 @@
 nradix
 
+![.github/workflows/build.yml](https://github.com/signalsciences/nradix/workflows/.github/workflows/build.yml/badge.svg)
+
 Translated to Golang implementation of nginx's radix tree (allowing to store and lookup IP information)
 
 
