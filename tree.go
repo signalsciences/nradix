@@ -82,11 +82,16 @@ func NewTree(preallocate int) *Tree {
 	return tree
 }
 
-// AddCIDR adds value associated with IP/mask to the tree. Will return error for invalid CIDR or if value already exists.
+// AddCIDR adds value associated with a single IP or IP/mask to the tree. Will
+// return error for invalid CIDR or if value already exists.
+//
 func (tree *Tree) AddCIDR(cidr string, val interface{}) error {
 	return tree.AddCIDRb([]byte(cidr), val)
 }
 
+// AddCIDRb adds value associated with a single IP or IP/mask to the tree. Will
+// return error for invalid CIDR or if value already exists.
+//
 func (tree *Tree) AddCIDRb(cidr []byte, val interface{}) error {
 	if bytes.IndexByte(cidr, '.') > 0 {
 		ip, mask, err := parsecidr4(cidr)
@@ -102,11 +107,14 @@ func (tree *Tree) AddCIDRb(cidr []byte, val interface{}) error {
 	return tree.insert(ip, mask, val, false)
 }
 
-// AddCIDR adds value associated with IP/mask to the tree. Will return error for invalid CIDR or if value already exists.
+// AddCIDR adds value associated with a single IP or IP/mask to the tree. Will
+// return error for invalid CIDR or if value already exists.
 func (tree *Tree) SetCIDR(cidr string, val interface{}) error {
 	return tree.SetCIDRb([]byte(cidr), val)
 }
 
+// AddCIDRb adds value associated with a single IP or IP/mask to the tree. Will
+// return error for invalid CIDR or if value already exists.
 func (tree *Tree) SetCIDRb(cidr []byte, val interface{}) error {
 	if bytes.IndexByte(cidr, '.') > 0 {
 		ip, mask, err := parsecidr4(cidr)
@@ -148,6 +156,7 @@ func (tree *Tree) DeleteCIDR(cidr string) error {
 	return tree.DeleteCIDRb([]byte(cidr))
 }
 
+// DeleteCIDRb removes value associated with IP/mask from the tree.
 func (tree *Tree) DeleteCIDRb(cidr []byte) error {
 	if bytes.IndexByte(cidr, '.') > 0 {
 		ip, mask, err := parsecidr4(cidr)
@@ -163,7 +172,8 @@ func (tree *Tree) DeleteCIDRb(cidr []byte) error {
 	return tree.delete(ip, mask, false)
 }
 
-// FindCIDR traverses tree to proper Node and returns previously saved information in longest covered IP.
+// FindCIDR traverses tree to proper Node and returns previously saved
+// information in longest covered IP.
 func (tree *Tree) FindCIDR(cidr string) (interface{}, error) {
 	return tree.FindCIDRb([]byte(cidr))
 }
@@ -191,7 +201,8 @@ func (tree *Tree) FindCIDRb(cidr []byte) (interface{}, error) {
 	return nil, nil
 }
 
-// FindExactCIDR traverses tree to proper Node and returns previously saved information for an exact match.
+// FindExactCIDR traverses tree to proper Node and returns previously saved
+// information for an exact match.
 func (tree *Tree) FindExactCIDR(cidr string) (interface{}, error) {
 	return tree.FindExactCIDRb([]byte(cidr))
 }
@@ -219,7 +230,8 @@ func (tree *Tree) FindExactCIDRb(cidr []byte) (interface{}, error) {
 	return nil, ErrNotFound
 }
 
-// FindAllCIDR traverses tree to proper Node and returns previously saved information in all covered IPs.
+// FindAllCIDR traverses tree to proper Node and returns previously saved
+// information in all covered IPs.
 func (tree *Tree) FindAllCIDR(cidr string) ([]interface{}, error) {
 	return tree.FindAllCIDRb([]byte(cidr))
 }
@@ -244,7 +256,8 @@ func (tree *Tree) FindAllCIDRb(cidr []byte) ([]interface{}, error) {
 
 type WalkTreeFunc func(cidr net.IPNet, value interface{}) error
 
-// WalkTree walks the tree (depth first) and calls the `WalkTreeFunc` for each node with a value.
+// WalkTree walks the tree (depth first) and calls the `WalkTreeFunc` for each
+// node with a value.
 func (tree *Tree) WalkTree(opt OptWalk, wtfunc WalkTreeFunc) error {
 	walkpath := make([]byte, 0, 128)
 	return tree.walk(opt, wtfunc, walkpath, tree.root)
@@ -270,7 +283,8 @@ func (tree *Tree) walk(opt OptWalk, wtfunc WalkTreeFunc, walkpath []byte, node *
 	return nil
 }
 
-// Takes a walkpath byte slice (0=left, 1=right) and turns it into the net.IPNet that it represents.
+// Takes a walkpath byte slice (0=left, 1=right) and turns it into the
+// net.IPNet that it represents.
 func walkpath2net(opt OptWalk, walkpath []byte) net.IPNet {
 	ip := make([]byte, 0, net.IPv6len)
 	var byteval, bitval byte
